@@ -2,6 +2,7 @@ import numpy as np
 import scipy.stats as st
 import heapq
 import collections
+import matplotlib.pyplot as plt
 
 ## M/M/1 QUEUE SIMULATOR
 def run_simulation(lambda_rate, mu_rate, max_time):
@@ -13,6 +14,10 @@ def run_simulation(lambda_rate, mu_rate, max_time):
 
     arrival_times = {}
     delays = []
+    running_avg_delays = []
+    departure_times = []
+    total_delay_sum = 0
+    departed_count = 0
     queue = collections.deque()
 
     # initial conditions and system state
@@ -56,6 +61,10 @@ def run_simulation(lambda_rate, mu_rate, max_time):
             # compute the delay for this event
             delay = current_time - arrival_times[event_id]
             delays.append(delay)
+            total_delay_sum += delay
+            departed_count += 1
+            running_avg_delays.append(total_delay_sum / departed_count)
+            departure_times.append(current_time)
             if queue:
                 # seize the server with the next event in the queue
                 next_id = queue.popleft()
@@ -72,7 +81,7 @@ def run_simulation(lambda_rate, mu_rate, max_time):
         elif event_type == 'end':
             print(f"End of simulation reached at time {current_time:.4f}")
             break
-    return delays
+    return delays, running_avg_delays, departure_times
 
 ## MAIN
 if __name__ == "__main__":
@@ -85,11 +94,27 @@ if __name__ == "__main__":
     # each run has same initial conditions (=> identically distributed)
     n_runs = 30
     average_delays_per_run = []
+    all_running_avg_delays = []
+    all_departure_times = []
 
     for i in range(n_runs):
         print(f"\n--- Simulation run {i+1} ---")
-        delays = run_simulation(lambda_rate, mu_rate, max_time)
+        delays, running_avg_delays, departure_times = run_simulation(lambda_rate, mu_rate, max_time)
         average_delays_per_run.append(np.mean(delays))
+        all_running_avg_delays.append(running_avg_delays)
+        all_departure_times.append(departure_times)
+
+    # plots: all running average delays over time
+    plt.figure()
+    for run_avg, dep_times in zip(all_running_avg_delays, all_departure_times):
+        plt.plot(dep_times, run_avg, alpha=0.3, linewidth=0.7)
+    plt.axhline(1/(mu_rate-lambda_rate), color='red', linestyle='--', label='Theoretical Average')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Average Delay in System [s]')
+    plt.title(f'Running Average Delay vs Time for {n_runs} Replications (λ={lambda_rate}, μ={mu_rate})')
+    plt.legend()
+    plt.savefig("running_average_plot.pdf", format="pdf", bbox_inches="tight")
+    plt.show()
 
     print("Simulation completed. Computing final statistics...")
 
