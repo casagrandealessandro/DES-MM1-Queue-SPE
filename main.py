@@ -118,11 +118,19 @@ def run_scenario(lambda_rate, mu_rate, max_time, n_runs, ex):
     plt.savefig(filename, format="pdf", bbox_inches="tight")
     plt.show()
 
+    # Q-Q plot to check for normality of the average delays
+    plt.figure()
+    st.probplot(average_delays_per_run, dist="norm", plot=plt)
+    plt.title(f'Q-Q Plot for Average Delays (λ={lambda_rate}, μ={mu_rate})')
+    qq_filename = f"qq_plot_lam{lambda_rate}_mu{mu_rate}.pdf"
+    plt.savefig(qq_filename, format="pdf", bbox_inches="tight")
+    plt.show()
+
     print("Simulation completed. Computing final statistics...")
 
     # in order to correctly apply the confidence interval formula, these assumptions must hold:
     # 1. The average delays from each run are independent and identically distributed (true by IR method design)
-    # 2. The average delays from each run are approximately normally distributed (holds for large n_runs by Central Limit Theorem, TODO: Q-Q plot to check normality)
+    # 2. The average delays from each run are approximately normally distributed (holds for large n_runs by Central Limit Theorem)
     # 3. The duration of the simulation is long enough to ensure the transient is negligible and the system is in steady state (TODO: think about cutting out the transient, or applying batch means?)
     grand_mean = np.mean(average_delays_per_run)
     confidence_interval = st.t.interval(0.95, df=n_runs-1, loc=grand_mean, scale=st.sem(average_delays_per_run))
