@@ -5,8 +5,7 @@ import collections
 import matplotlib.pyplot as plt
 
 ## M/M/1 QUEUE SIMULATOR
-def run_simulation(lambda_rate, mu_rate, max_time, ex):
-    rng = np.random.default_rng()
+def run_simulation(lambda_rate, mu_rate, max_time, ex, rng):
 
     # queue of events as a min-heap
     event_list = []
@@ -51,7 +50,7 @@ def run_simulation(lambda_rate, mu_rate, max_time, ex):
                 if ex == 1:
                     departure_time = current_time + rng.exponential(1/mu_rate)
                 elif ex == 2:
-                    departure_time = current_time + rejection_sampling()
+                    departure_time = current_time + rejection_sampling(rng)
                 heapq.heappush(event_list, (departure_time, 'departure', event_id))
                 #print(f"Departure scheduled at time {departure_time:.4f}")
             else:
@@ -75,7 +74,7 @@ def run_simulation(lambda_rate, mu_rate, max_time, ex):
                 if ex == 1:
                     departure_time = current_time + rng.exponential(1/mu_rate)
                 elif ex == 2:
-                    departure_time = current_time + rejection_sampling()
+                    departure_time = current_time + rejection_sampling(rng)
                 heapq.heappush(event_list, (departure_time, 'departure', next_id))
                 #print(f"Departure scheduled at time {departure_time:.4f}")
             else:
@@ -89,26 +88,30 @@ def run_simulation(lambda_rate, mu_rate, max_time, ex):
     return delays, running_avg_delays, departure_times
 
 # INDEPENDENT REPLICATIONS + PLOTS
-# runs are independent because they use different RNG seeds, automatically set by system entropy (=> independent) TODO: change seed for reprodubility
+# runs are independent because they use different RNG seeds (=> independent)
 # each run has same initial conditions (=> identically distributed)
-def run_scenario(lambda_rate, mu_rate, max_time, n_runs, ex):
+def run_scenario(lambda_rate, mu_rate, max_time, n_runs, ex, master_seed):
     average_delays_per_run = []
     all_running_avg_delays = []
     all_departure_times = []
 
+    print("Running simulations...")
+
     for i in range(n_runs):
-        #print(f"\n--- Simulation run {i+1} ---")
-        delays, running_avg_delays, departure_times = run_simulation(lambda_rate, mu_rate, max_time, ex)
+        rng = np.random.default_rng(master_seed + i)
+        delays, running_avg_delays, departure_times = run_simulation(lambda_rate, mu_rate, max_time, ex, rng)
         average_delays_per_run.append(np.mean(delays))
         all_running_avg_delays.append(running_avg_delays)
         all_departure_times.append(departure_times)
+
+    print("Simulations completed")
 
     # plots: all running average delays over time
     plt.figure()
     for run_avg, dep_times in zip(all_running_avg_delays, all_departure_times):
         plt.plot(dep_times, run_avg, alpha=0.3, linewidth=0.5)
     if mu_rate is not None:
-        plt.axhline(1/(mu_rate-lambda_rate), color='red', linestyle='-', label='Theoretical Average', linewidth=2)
+        plt.axhline(1/(mu_rate-lambda_rate), color='red', linestyle='-', label='Theoretical Average', linewidth=1)
     plt.xlim(0, max_time)
     plt.xlabel('Time [s]')
     plt.ylabel('Average delay in System [s]')
@@ -127,7 +130,7 @@ def run_scenario(lambda_rate, mu_rate, max_time, n_runs, ex):
     plt.savefig(qq_filename, format="pdf", bbox_inches="tight")
     plt.show()
 
-    print("Simulation completed. Computing final statistics...")
+    print("Statistics:")
 
     # in order to correctly apply the confidence interval formula, these assumptions must hold:
     # 1. The average delays from each run are independent and identically distributed (true by IR method design)
@@ -143,8 +146,7 @@ def run_scenario(lambda_rate, mu_rate, max_time, n_runs, ex):
 # REJECTION SAMPLING
 # to draw from the distribution f(x) = A|sinc(x-3)| for x in [0,6].
 # the sinc function has a maximum in x=3, let A=1 => the maximum is 1 and the bounding box is in [0,6] with height 1
-def rejection_sampling():
-    rng = np.random.default_rng()
+def rejection_sampling(rng):
     while True:
         x = rng.uniform(0, 6)
         y = rng.uniform(0, 1)
@@ -155,6 +157,7 @@ def rejection_sampling():
 if __name__ == "__main__":
     max_time = 30000
     n_runs = 30
+    initial_seed = 267423
 
     print("\nEXERCISE 1")
 
@@ -162,21 +165,21 @@ if __name__ == "__main__":
     lambda_rate = 1
     mu_rate = 2
     print(f"Default scenario: λ={lambda_rate}, μ={mu_rate}")
-    run_scenario(lambda_rate, mu_rate, max_time, n_runs, 1)
+    run_scenario(lambda_rate, mu_rate, max_time, n_runs, 1, initial_seed)
 
     # high load scenario: λ=1.9, μ=2
     lambda_rate = 1.9
     mu_rate = 2
     max_time = 400000  # to ensure steady state is reached
     print(f"\nHigh load scenario: λ={lambda_rate}, μ={mu_rate}")
-    run_scenario(lambda_rate, mu_rate, max_time, n_runs, 1)
+    run_scenario(lambda_rate, mu_rate, max_time, n_runs, 1, initial_seed)
 
     # low load scenario: λ=1, μ=10
     lambda_rate = 1
     mu_rate = 10
     max_time = 10000  # very stable
     print(f"\nLow load scenario: λ={lambda_rate}, μ={mu_rate}")
-    run_scenario(lambda_rate, mu_rate, max_time, n_runs, 1)
+    run_scenario(lambda_rate, mu_rate, max_time, n_runs, 1, initial_seed)
 
     print("\nEXERCISE 2")
 
@@ -184,4 +187,4 @@ if __name__ == "__main__":
     # for the system to be stable: λ < 1/μ. μ=3 => λ < 1/3 ≈ 0.333
     lambda_rate = 0.25
     print(f"\nScenario: λ={lambda_rate}")
-    run_scenario(lambda_rate, None, max_time, n_runs, 2)
+    run_scenario(lambda_rate, None, max_time, n_runs, 2, initial_seed)
