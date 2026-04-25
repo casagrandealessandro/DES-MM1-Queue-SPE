@@ -89,7 +89,7 @@ def run_simulation(lambda_rate, mu_rate, max_time, ex):
     return delays, running_avg_delays, departure_times
 
 # INDEPENDENT REPLICATIONS + PLOTS
-# runs are independent because they use different RNG seeds, automatically set by system entropy (=> independent)
+# runs are independent because they use different RNG seeds, automatically set by system entropy (=> independent) TODO: change seed for reprodubility
 # each run has same initial conditions (=> identically distributed)
 def run_scenario(lambda_rate, mu_rate, max_time, n_runs, ex):
     average_delays_per_run = []
@@ -106,23 +106,24 @@ def run_scenario(lambda_rate, mu_rate, max_time, n_runs, ex):
     # plots: all running average delays over time
     plt.figure()
     for run_avg, dep_times in zip(all_running_avg_delays, all_departure_times):
-        plt.plot(dep_times, run_avg, alpha=0.3, linewidth=0.7)
+        plt.plot(dep_times, run_avg, alpha=0.3, linewidth=0.5)
     if mu_rate is not None:
-        plt.axhline(1/(mu_rate-lambda_rate), color='red', linestyle='--', label='Theoretical Average')
+        plt.axhline(1/(mu_rate-lambda_rate), color='red', linestyle='-', label='Theoretical Average', linewidth=2)
+    plt.xlim(0, max_time)
     plt.xlabel('Time [s]')
-    plt.ylabel('Average Delay in System [s]')
-    plt.title(f'Running Average Delay vs Time for {n_runs} Replications (λ={lambda_rate}, μ={mu_rate}) (Exercise {ex})')
+    plt.ylabel('Average delay in System [s]')
+    plt.title(f'Average delay in system vs. Time (λ={lambda_rate}, μ={mu_rate})')
     if mu_rate is not None:
         plt.legend()
-    filename = f"plot_lam{lambda_rate}_mu{mu_rate}.pdf"
+    filename = f"plot_lambda{lambda_rate}_mu{mu_rate}.pdf"
     plt.savefig(filename, format="pdf", bbox_inches="tight")
     plt.show()
 
     # Q-Q plot to check for normality of the average delays
     plt.figure()
     st.probplot(average_delays_per_run, dist="norm", plot=plt)
-    plt.title(f'Q-Q Plot for Average Delays (λ={lambda_rate}, μ={mu_rate})')
-    qq_filename = f"qq_plot_lam{lambda_rate}_mu{mu_rate}.pdf"
+    plt.title(f'Q-Q plot for average delays (λ={lambda_rate}, μ={mu_rate})')
+    qq_filename = f"qq_plot_lambda{lambda_rate}_mu{mu_rate}.pdf"
     plt.savefig(qq_filename, format="pdf", bbox_inches="tight")
     plt.show()
 
@@ -155,6 +156,8 @@ if __name__ == "__main__":
     max_time = 30000
     n_runs = 30
 
+    print("\nEXERCISE 1")
+
     # default scenario: λ=1, μ=2
     lambda_rate = 1
     mu_rate = 2
@@ -175,10 +178,10 @@ if __name__ == "__main__":
     print(f"\nLow load scenario: λ={lambda_rate}, μ={mu_rate}")
     run_scenario(lambda_rate, mu_rate, max_time, n_runs, 1)
 
-    # scenario exercise 2
+    print("\nEXERCISE 2")
+
     max_time = 100000
-    # for the system to be stable: λ < 1/μ. μ=3 => λ < 1/3 ≈ 0.333. TODO: discuss outliers for exponential distribution
-    lambda_rate = 0.332
-    print(f"\nDefault scenario, exercise 2: λ={lambda_rate}")
+    # for the system to be stable: λ < 1/μ. μ=3 => λ < 1/3 ≈ 0.333
+    lambda_rate = 0.25
+    print(f"\nScenario: λ={lambda_rate}")
     run_scenario(lambda_rate, None, max_time, n_runs, 2)
-    # TODO: code and plot refactor, especially for ex2
