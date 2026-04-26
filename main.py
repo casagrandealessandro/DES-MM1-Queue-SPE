@@ -111,22 +111,28 @@ def run_scenario(lambda_rate, mu_rate, max_time, n_runs, ex, master_seed):
     for run_avg, dep_times in zip(all_running_avg_delays, all_departure_times):
         plt.plot(dep_times, run_avg, alpha=0.3, linewidth=0.5)
     if mu_rate is not None:
-        plt.axhline(1/(mu_rate-lambda_rate), color='red', linestyle='-', label='Theoretical Average', linewidth=1)
+        plt.axhline(1/(mu_rate-lambda_rate), color='black', linestyle='--', label='Theoretical Average', linewidth=1.5)
     plt.xlim(0, max_time)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Average delay in System [s]')
-    plt.title(f'Average delay in system vs. Time (λ={lambda_rate}, μ={mu_rate})')
+    plt.xlabel('Time [s]', fontsize=13)
+    plt.ylabel('Average delay in System [s]', fontsize=13)
+    plt.title(f'Average delay in system vs. Time (λ={lambda_rate}, μ={mu_rate})', fontsize=15)
+    plt.xticks(fontsize=11)
+    plt.yticks(fontsize=11)
     if mu_rate is not None:
-        plt.legend()
-    filename = f"plot_lambda{lambda_rate}_mu{mu_rate}.pdf"
+        plt.legend(fontsize=11)
+    filename = f"Images/plot_lambda{lambda_rate}_mu{mu_rate}.pdf"
     plt.savefig(filename, format="pdf", bbox_inches="tight")
     plt.show()
 
     # Q-Q plot to check for normality of the average delays
     plt.figure()
     st.probplot(average_delays_per_run, dist="norm", plot=plt)
-    plt.title(f'Q-Q plot for average delays (λ={lambda_rate}, μ={mu_rate})')
-    qq_filename = f"qq_plot_lambda{lambda_rate}_mu{mu_rate}.pdf"
+    plt.title(f'Q-Q plot for average delays (λ={lambda_rate}, μ={mu_rate})', fontsize=15)
+    plt.xlabel('Theoretical Quantiles', fontsize=13)
+    plt.ylabel('Ordered Values', fontsize=13)
+    plt.xticks(fontsize=11)
+    plt.yticks(fontsize=11)
+    qq_filename = f"Images/qq_plot_lambda{lambda_rate}_mu{mu_rate}.pdf"
     plt.savefig(qq_filename, format="pdf", bbox_inches="tight")
     plt.show()
 
@@ -139,9 +145,9 @@ def run_scenario(lambda_rate, mu_rate, max_time, n_runs, ex, master_seed):
     grand_mean = np.mean(average_delays_per_run)
     confidence_interval = st.t.interval(0.95, df=n_runs-1, loc=grand_mean, scale=st.sem(average_delays_per_run))
     if mu_rate is not None:
-        print(f"Theoretical Average: {1 / (mu_rate - lambda_rate):.3f} s")
-    print(f"Simulated Average: {grand_mean:.3f} s")
-    print(f"95% Confidence Interval: {confidence_interval[0]:.3f} to {confidence_interval[1]:.3f} s")
+        print(f"Theoretical Average: {1 / (mu_rate - lambda_rate):.3f}s")
+    print(f"Simulated Average: {grand_mean:.3f}s")
+    print(f"95% Confidence Interval: [{confidence_interval[0]:.3f}s, {confidence_interval[1]:.3f}s]")
 
 # REJECTION SAMPLING
 # to draw from the distribution f(x) = A|sinc(x-3)| for x in [0,6].
@@ -155,15 +161,15 @@ def rejection_sampling(rng):
 
 ## MAIN
 if __name__ == "__main__":
-    max_time = 30000
     n_runs = 30
-    initial_seed = 267423
+    initial_seed = 666
 
     print("\nEXERCISE 1")
 
     # default scenario: λ=1, μ=2
     lambda_rate = 1
     mu_rate = 2
+    max_time = 30000
     print(f"Default scenario: λ={lambda_rate}, μ={mu_rate}")
     run_scenario(lambda_rate, mu_rate, max_time, n_runs, 1, initial_seed)
 
@@ -177,14 +183,35 @@ if __name__ == "__main__":
     # low load scenario: λ=1, μ=10
     lambda_rate = 1
     mu_rate = 10
-    max_time = 10000  # very stable
+    max_time = 8000  # very stable
     print(f"\nLow load scenario: λ={lambda_rate}, μ={mu_rate}")
     run_scenario(lambda_rate, mu_rate, max_time, n_runs, 1, initial_seed)
 
     print("\nEXERCISE 2")
 
-    max_time = 100000
+    # plot the shape of the service time distribution
+    x = np.linspace(0, 6, 1000)
+    plt.figure()
+    plt.plot(x, np.abs(np.sinc(x - 3)), linewidth=2)
+    plt.xlim(0, 6)
+    plt.ylim(0, 1.1)
+    plt.xlabel('Service Time', fontsize=13)
+    plt.ylabel('Density f(x)=|sinc(x-3)|', fontsize=13)
+    plt.title('Service Time Distribution', fontsize=15)
+    plt.xticks(fontsize=11)
+    plt.yticks(fontsize=11)
+    plt.savefig("Images/service_time_distribution.pdf", format="pdf", bbox_inches="tight")
+    plt.show()
+
     # for the system to be stable: λ < 1/μ. μ=3 => λ < 1/3 ≈ 0.333
-    lambda_rate = 0.25
-    print(f"\nScenario: λ={lambda_rate}")
+    # stable scenario: λ=0.3
+    max_time = 100000
+    lambda_rate = 0.3
+    print(f"\nStable scenario: λ={lambda_rate}")
+    run_scenario(lambda_rate, None, max_time, n_runs, 2, initial_seed)
+
+    # extreme scenario: λ=0.33 (almost equal to the stability limit)
+    max_time = 1000000
+    lambda_rate = 0.33
+    print(f"\nExtreme scenario: λ={lambda_rate}")
     run_scenario(lambda_rate, None, max_time, n_runs, 2, initial_seed)
